@@ -1,0 +1,76 @@
+CAPI=2:
+
+name : AFRL:project:ace_vexriscv_murax:1.0.0
+description: Create a simple Vexrisv SoC for embedded system development.
+
+filesets:
+  src_xilinx:
+    files:
+      - common/xilinx/system_gen.tcl : {file_type : tclSource}
+
+  tb:
+    files:
+      - tb/tb_ace_murax.v : { file_type: verilogSource }
+
+  nexys-a7-100t:
+    files:
+      - nexys-a7-100t/system_constr.xdc : {file_type : xdc}
+      - nexys-a7-100t/system_wrapper.v : {file_type : verilogSource}
+    depend:
+      - AFRL:utility:digilent_nexys-a7-100t_board_base:1.0.0
+      - AFRL:utility:vivado_board_support_packages
+      - spinalhdl:cpu:ace_vexriscv_murax_xilinx:1.0.0
+
+  crosslink-nx_eval:
+    files:
+      - crosslink-nx_eval/system_constr.pdc : {file_type : PDC}
+      - crosslink-nx_eval/system_wrapper.v : {file_type : verilogSource}
+    depend:
+      - AFRL:utility:lattice_crosslink-nx_eval_board_base:1.0.0
+      - spinalhdl:cpu:ace_vexriscv_murax:1.0.0
+
+  dep:
+    depend:
+      - AFRL:rom:apb_rom:1.0.0
+      - AFRL:utility:helper:1.0.0
+
+  dep_tb:
+    depend:
+      - spinalhdl:cpu:ace_vexriscv_murax_sim:1.0.0
+      - AFRL:simulation:clock_stimulator
+      - AFRL:vpi:tcp_server:1.0.0
+      - ::jtag_vpi:0-r5
+
+targets:
+
+  default: &default
+    filesets: [dep]
+    toplevel: system
+
+  nexys-a7-100t:
+    <<: *default
+    description: Build for nexys-a7-100t digilent development board.
+    default_tool: vivado
+    filesets_append : [src_xilinx, nexys-a7-100t]
+    tools:
+      vivado:
+        source_mgmt_mode: All
+        board_part: digilentinc.com:nexys-a7-100t:part0:1.2
+        part: xc7a100tcsg324-1
+
+  crosslink-nx_eval:
+    <<: *default
+    description : Build for CrossLink NX Evaluation Board.
+    default_tool : radiant
+    filesets_append: [crosslink-nx_eval]
+    tools:
+      radiant:
+        part: LIFCL-40-9BG400C
+
+  sim: &sim
+    description: Simulate with JTAG TCP server, UART TCP server, and GPIO TCP server
+    default_tool: icarus
+    toplevel: tb_ace_murax
+    filesets: [tb, dep_tb]
+    parameters:
+      - jtag_vpi_enable=true
